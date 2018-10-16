@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Produtos</title>
+</head>
+<body>
+    <table>
+        <tr>
+            <td>id</td>
+            <td>titulo</td>
+            <td>descrição</td>
+            <td>preço</td>
+        </tr>
+        <% for(dado of lista) {%>
+            <tr>
+                <td><%=dado.id %></td>
+                <td><%=dado.titulo %></td>
+                <td><%=dado.descricao %></td>
+                <td><%=dado.preco %></td>
+            </tr>
+        <%}%>
+    </table>
+</body>
+</html>
