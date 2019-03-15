@@ -1,10 +1,18 @@
-class NegociacoesView {
+class NegociacoesView extends View {
 
-    constructor(elemento) {
-        this._elemento = elemento
-    }
+    /*
+     * Por padrão, quando uma classe herda outra, ela também herda seu construtor.
+     * Por isso, não precisa redeclarar chamando super
+     * 
+     * Caso o construtor da classe filha recebesse parametros diferentes do pai,
+     * seria necessario declarar um constructor, chamar o super com seus devidos
+     * parametros, e usar os novos parametros normalmente.
+     */
+    // constructor(elemento) {
+    //     super(elemento)
+    // }
 
-    _template(model) {
+    template(model) {
         return `
             <table class="table table-hover table-bordered">
                 <thead>
@@ -37,9 +45,5 @@ class NegociacoesView {
                 </tfoot>
             </table>
         `
-    }
-
-    update(model) {
-        this._elemento.innerHTML = this._template(model)
     }
 }
