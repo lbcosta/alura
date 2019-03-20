@@ -1,0 +1,21 @@
+{
+  "name": "casadocodigo",
+  "version": "1.0.0",
+  "description": "Livraria Casa do Codigo",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Leonardo Costa",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "marko": "^4.16.2",
+    "sqlite": "^3.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.10"
+  }
+}
