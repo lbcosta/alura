@@ -3,6 +3,51 @@ module.exports = app => {
         res.send('OK')
     })
 
+    app.delete('/pagamentos/pagamento/:id', (req, res) => {
+        const pagamento = {}
+        const id = req.params.id
+
+        const connection = app.persistencia.connectionFactory()
+        const pagamentoDao = new app.persistencia.PagamentoDao(connection)
+
+        pagamento.id = id
+        pagamento.status = "CANCELADO"
+
+        pagamentoDao.atualiza(pagamento, erro => {
+            if(erro) {
+                res.status(500).send(erro)
+                return
+            }
+
+            console.log('Pagamento Cancelado')
+            res.status(204).send(pagamento)
+        })
+    })
+
+    app.put('/pagamentos/pagamento/:id', (req, res) => {
+
+        const pagamento = {}
+        const id = req.params.id
+
+        const connection = app.persistencia.connectionFactory()
+        const pagamentoDao = new app.persistencia.PagamentoDao(connection)
+
+        pagamento.id = id
+        pagamento.status = "CONFIRMADO"
+
+        pagamentoDao.atualiza(pagamento, erro => {
+            if(erro) {
+                res.status(500).send(erro)
+                return
+            }
+
+            console.log('Pagamento Confirmado');
+            res.send(pagamento)
+        })
+
+
+    })
+
     app.post('/pagamentos/pagamento', (req, res) => {
 
         req.assert("forma_de_pagamento", "Forma de pagamento é obrigatório").notEmpty()
