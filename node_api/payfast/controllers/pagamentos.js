@@ -4,6 +4,25 @@ module.exports = function(app){
     res.send('OK.');
   });
 
+  app.get('/pagamentos/pagamento/:id', (req, res) => {
+    const id = req.params.id
+    console.log(`Consultando pagamento ${id}`)
+    
+    
+    const connection = app.persistencia.connectionFactory();
+    const pagamentoDao = new app.persistencia.PagamentoDao(connection);
+
+    pagamentoDao.buscaPorId(id, (err, result) => {
+      if(err) {
+        console.log(`Erro ao consultar o banco: ${err}`)
+        res.status(500).send(err)
+        return
+      }
+        console.log('Pagamento encontrado.')
+        res.status(200).send(result)
+    })
+  })
+
   app.delete('/pagamentos/pagamento/:id', function(req, res){
     var pagamento = {};
     var id = req.params.id;
