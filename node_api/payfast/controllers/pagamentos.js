@@ -1,5 +1,5 @@
-module.exports = function(app){
-  app.get('/pagamentos', function(req, res){
+module.exports = function (app) {
+  app.get('/pagamentos', function (req, res) {
     console.log('Recebida requisicao de teste na porta 3000.')
     res.send('OK.');
   });
@@ -7,23 +7,34 @@ module.exports = function(app){
   app.get('/pagamentos/pagamento/:id', (req, res) => {
     const id = req.params.id
     console.log(`Consultando pagamento ${id}`)
-    
-    
-    const connection = app.persistencia.connectionFactory();
-    const pagamentoDao = new app.persistencia.PagamentoDao(connection);
 
-    pagamentoDao.buscaPorId(id, (err, result) => {
-      if(err) {
-        console.log(`Erro ao consultar o banco: ${err}`)
-        res.status(500).send(err)
-        return
+    const memcachedClient = app.servicos.memcachedClient()
+
+    memcachedClient.get(`pagamento-${id}`, (erro, retorno) => {
+      if (erro || !retorno) {
+        console.log('MISS - Chave não encontrada');
+
+        const connection = app.persistencia.connectionFactory();
+        const pagamentoDao = new app.persistencia.PagamentoDao(connection);
+
+        pagamentoDao.buscaPorId(id, (err, result) => {
+          if (err) {
+            console.log(`Erro ao consultar o banco: ${err}`)
+            res.status(500).send(err)
+            return
+          }
+          console.log('Pagamento encontrado.')
+          console.log(JSON.stringify(result))
+          res.status(200).json(result)
+        })
+      } else {
+        console.log(`HIT - ${JSON.stringify(retorno)}`);
+        res.status(200).json(retorno)
       }
-        console.log('Pagamento encontrado.')
-        res.status(200).send(result)
     })
   })
 
-  app.delete('/pagamentos/pagamento/:id', function(req, res){
+  app.delete('/pagamentos/pagamento/:id', function (req, res) {
     var pagamento = {};
     var id = req.params.id;
 
@@ -33,17 +44,17 @@ module.exports = function(app){
     var connection = app.persistencia.connectionFactory();
     var pagamentoDao = new app.persistencia.PagamentoDao(connection);
 
-    pagamentoDao.atualiza(pagamento, function(erro){
-        if (erro){
-          res.status(500).send(erro);
-          return;
-        }
-        console.log('pagamento cancelado');
-        res.status(204).send(pagamento);
+    pagamentoDao.atualiza(pagamento, function (erro) {
+      if (erro) {
+        res.status(500).send(erro);
+        return;
+      }
+      console.log('pagamento cancelado');
+      res.status(204).send(pagamento);
     });
   });
 
-  app.put('/pagamentos/pagamento/:id', function(req, res){
+  app.put('/pagamentos/pagamento/:id', function (req, res) {
 
     var pagamento = {};
     var id = req.params.id;
@@ -54,28 +65,28 @@ module.exports = function(app){
     var connection = app.persistencia.connectionFactory();
     var pagamentoDao = new app.persistencia.PagamentoDao(connection);
 
-    pagamentoDao.atualiza(pagamento, function(erro){
-        if (erro){
-          res.status(500).send(erro);
-          return;
-        }
-        console.log('pagamento criado');
-        res.send(pagamento);
+    pagamentoDao.atualiza(pagamento, function (erro) {
+      if (erro) {
+        res.status(500).send(erro);
+        return;
+      }
+      console.log('pagamento criado');
+      res.send(pagamento);
     });
 
   });
 
-  app.post('/pagamentos/pagamento', function(req, res){
+  app.post('/pagamentos/pagamento', function (req, res) {
 
     req.assert("pagamento.forma_de_pagamento",
-        "Forma de pagamento eh obrigatorio").notEmpty();
+      "Forma de pagamento eh obrigatorio").notEmpty();
     req.assert("pagamento.valor",
       "Valor eh obrigatorio e deve ser um decimal")
-        .notEmpty().isFloat();
+      .notEmpty().isFloat();
 
     var erros = req.validationErrors();
 
-    if (erros){
+    if (erros) {
       console.log('Erros de validacao encontrados');
       res.status(400).send(erros);
       return;
@@ -90,23 +101,28 @@ module.exports = function(app){
     var connection = app.persistencia.connectionFactory();
     var pagamentoDao = new app.persistencia.PagamentoDao(connection);
 
-    pagamentoDao.salva(pagamento, function(erro, resultado){
-      if(erro){
+    pagamentoDao.salva(pagamento, function (erro, resultado) {
+      if (erro) {
         console.log('Erro ao inserir no banco:' + erro);
         res.status(500).send(erro);
       } else {
-      pagamento.id = resultado.insertId;
-      console.log('pagamento criado');
+        pagamento.id = resultado.insertId;
+        console.log(`pagamento criado com id ${pagamento.id}`);
 
-      if (pagamento.forma_de_pagamento == 'cartao'){
-        var cartao = req.body["cartao"];
-        console.log(cartao);
+        const memcachedClient = app.servicos.memcachedClient()
+        memcachedClient.set(`pagamento-${pagamento.id}`, { pagamento }, 60, err => {
+          console.log(`Nova chave adicionada ao cache: ${pagamento.id}`);
+        })
 
-        var clienteCartoes = new app.servicos.clienteCartoes();
+        if (pagamento.forma_de_pagamento == 'cartao') {
+          var cartao = req.body["cartao"];
+          console.log(cartao);
 
-        clienteCartoes.autoriza(cartao,
-            function(exception, request, response, retorno){
-              if(exception){
+          var clienteCartoes = new app.servicos.clienteCartoes();
+
+          clienteCartoes.autoriza(cartao,
+            function (exception, request, response, retorno) {
+              if (exception) {
                 console.log(exception);
                 res.status(400).send(exception);
                 return;
@@ -114,57 +130,57 @@ module.exports = function(app){
               console.log(retorno);
 
               res.location('/pagamentos/pagamento/' +
-                    pagamento.id);
+                pagamento.id);
 
               var response = {
                 dados_do_pagamanto: pagamento,
                 cartao: retorno,
                 links: [
                   {
-                    href:"http://localhost:3000/pagamentos/pagamento/"
-                            + pagamento.id,
-                    rel:"confirmar",
-                    method:"PUT"
+                    href: "http://localhost:3000/pagamentos/pagamento/"
+                      + pagamento.id,
+                    rel: "confirmar",
+                    method: "PUT"
                   },
                   {
-                    href:"http://localhost:3000/pagamentos/pagamento/"
-                            + pagamento.id,
-                    rel:"cancelar",
-                    method:"DELETE"
+                    href: "http://localhost:3000/pagamentos/pagamento/"
+                      + pagamento.id,
+                    rel: "cancelar",
+                    method: "DELETE"
                   }
                 ]
               }
 
               res.status(201).json(response);
               return;
-        });
+            });
 
 
-      } else {
-        res.location('/pagamentos/pagamento/' +
-              pagamento.id);
+        } else {
+          res.location('/pagamentos/pagamento/' +
+            pagamento.id);
 
-        var response = {
-          dados_do_pagamanto: pagamento,
-          links: [
-            {
-              href:"http://localhost:3000/pagamentos/pagamento/"
-                      + pagamento.id,
-              rel:"confirmar",
-              method:"PUT"
-            },
-            {
-              href:"http://localhost:3000/pagamentos/pagamento/"
-                      + pagamento.id,
-              rel:"cancelar",
-              method:"DELETE"
-            }
-          ]
+          var response = {
+            dados_do_pagamanto: pagamento,
+            links: [
+              {
+                href: "http://localhost:3000/pagamentos/pagamento/"
+                  + pagamento.id,
+                rel: "confirmar",
+                method: "PUT"
+              },
+              {
+                href: "http://localhost:3000/pagamentos/pagamento/"
+                  + pagamento.id,
+                rel: "cancelar",
+                method: "DELETE"
+              }
+            ]
+          }
+
+          res.status(201).json(response);
         }
-
-        res.status(201).json(response);
       }
-    }
     });
 
   });
